@@ -15,9 +15,6 @@ Run `python unicornn.py` to execute all sanity checks and a tiny training demo.
 import math
 import torch
 import torch.nn as nn
-
-
-
 # 1. Reference recurrence (plain autograd; used to verify the custom backward)
 
 def reference_recurrence(x, w, c, dt, alpha):
@@ -32,8 +29,6 @@ def reference_recurrence(x, w, c, dt, alpha):
         y = y + h * z
         ys.append(y)
     return torch.stack(ys)
-
-
 
 # 2. Reversible recurrence with hand-written BPTT (what the CUDA kernel does)
 class UnICORNNFn(torch.autograd.Function):
