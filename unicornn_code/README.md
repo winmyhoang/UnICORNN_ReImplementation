@@ -120,7 +120,6 @@ length, including without noise. I found no evidence that UnICORNN beats a well-
 - The numbers were produced on Google Colab (CPU runtime for my own implementation, a T4 GPU runtime for the authors' code),
   so speeds from the two are not comparable.
 - UnICORNN's `dt` and `alpha` were not tuned in my experiments, while the LSTM received a small search over its settings.
-- The scripts were developed together with an AI assistant; check them yourself before relying on them.
 
 ## Credit
 
