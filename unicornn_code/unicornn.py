@@ -58,31 +58,30 @@ class UnICORNNFn(torch.autograd.Function):
         N, B, m = x.shape
         sc = torch.sigmoid(c)
         h = dt * sc
-        y, z = ctx.yN, ctx.zN                      # states after the last step
-        Ybar = x.new_zeros(B, m)                   # adjoint of y after current step
-        Zbar = x.new_zeros(B, m)                   # adjoint of z after current step
+        y, z = ctx.yN, ctx.zN# states after the last step
+        Ybar = x.new_zeros(B, m)# adjoint of y after current step
+        Zbar = x.new_zeros(B, m) # adjoint of z after current step
         gx = torch.empty_like(x)
         gw = x.new_zeros(B, m)
         gh = x.new_zeros(B, m)
         for n in range(N - 1, -1, -1):
-            Ybar = Ybar + grad_out[n]              # loss term at y_n
-            zt = Zbar + h * Ybar                   # total adjoint of z_n
-            # --- reverse the step exactly (eq. 7): recover y_{n-1}, z_{n-1}
+            Ybar = Ybar + grad_out[n]# loss term at y_n
+            zt = Zbar + h * Ybar # total adjoint of z_n
+                                # reverse the step exactly (eq. 7): recover y_{n-1}, z_{n-1}
             y_prev = y - h * z
             pre = w * y_prev + x[n]
             t = torch.tanh(pre)
-            s = 1.0 - t * t                        # sigma'(pre)
+            s = 1.0 - t * t # sigma'(pre)
             g = t + alpha * y_prev
             z_prev = z + h * g
-            # --- parameter / input gradients
             gx[n] = -h * zt * s
             gw = gw - h * zt * s * y_prev
             gh = gh + Ybar * z - zt * g
-            # --- propagate adjoints to the previous step
+                                            #propagate adjoints to the previous step
             Ybar = Ybar - h * zt * (s * w + alpha)
             Zbar = zt
             y, z = y_prev, z_prev
-        gc = gh.sum(0) * dt * sc * (1.0 - sc)      # chain rule through h = dt*sigmoid(c)
+        gc = gh.sum(0) * dt * sc * (1.0 - sc)# chain rule through h = dt*sigmoid(c)
         return gx, gw.sum(0), gc, None, None
 
 
@@ -105,15 +104,15 @@ class VarDropout(nn.Module):
 class UnICORNNLayer(nn.Module):
     def __init__(self, n_in, m, dt, alpha, reversible=True):
         super().__init__()
-        self.V = nn.Linear(n_in, m)                     # V and bias b
-        nn.init.kaiming_uniform_(self.V.weight, a=8)    # Appendix A
+        self.V = nn.Linear(n_in, m) # V and bias b
+        nn.init.kaiming_uniform_(self.V.weight, a=8)# Appendix A
         nn.init.zeros_(self.V.bias)
-        self.w = nn.Parameter(torch.rand(m))            # U(0,1)
+        self.w = nn.Parameter(torch.rand(m))# U(0,1)
         self.c = nn.Parameter(torch.empty(m).uniform_(-0.1, 0.1))
         self.dt, self.alpha, self.reversible = dt, alpha, reversible
 
-    def forward(self, u):                               # u: (N,B,n_in)
-        x = self.V(u)                                   # parallel over time
+    def forward(self, u): # u: (N,B,n_in)
+        x = self.V(u) # parallel over time
         if self.reversible:
             return UnICORNNFn.apply(x, self.w, self.c, self.dt, self.alpha)
         return reference_recurrence(x, self.w, self.c, self.dt, self.alpha)
@@ -131,11 +130,11 @@ class UnICORNN(nn.Module):
         self.layers, self.drops = nn.ModuleList(layers), nn.ModuleList(drops)
         self.readout = nn.Linear(m, n_out)
 
-    def forward(self, u):                               # u: (N,B,n_in)
+    def forward(self, u): # u: (N,B,n_in)
         h = u
         for layer, drop in zip(self.layers, self.drops):
             h = drop(layer(h))
-        return self.readout(h[-1])                      # last time step
+        return self.readout(h[-1]) # last time step
 
 
 
@@ -173,7 +172,7 @@ def check_reversibility(dtype, N=1000):
         z = z - h * (torch.tanh(w * y + x[n]) + alpha * y); y = y + h * z
         ys.append(y); zs.append(z)
     err = 0.0
-    for n in range(N - 1, 0, -1):                      # walk back, compare to stored
+    for n in range(N - 1, 0, -1):# walk back, compare to stored
         y_prev = y - h * z
         z = z + h * (torch.tanh(w * y_prev + x[n]) + alpha * y_prev)
         y = y_prev
